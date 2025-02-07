@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { Userdetails } = require("./model");
+const { Userdetails,ArticleTable } = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is imported
 
 router.get('/login', async function (req, res) {
@@ -38,5 +38,47 @@ router.get('/login', async function (req, res) {
     });
   }
 });
+
+
+
+
+
+router.get('/GetArticle', async function (req, res) {
+  try {
+    const articles = await ArticleTable.find({});
+    res.status(200).json({
+      Boolval: true,
+      data: articles,
+      returnerror: ""
+    });
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+
+
+router.get('/GetArticle', async function (req, res) {
+  try {
+
+  
+
+
+      res.send('hello')
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
 
 module.exports = router;

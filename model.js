@@ -81,10 +81,27 @@ const BookingPracelDetSchema = new Schema({
 });
 
 
+const ArticleTableSchema = new Schema({
+  Articlecode:         { type: String, maxlength: 20 },
+  ArticleName:       { type: String, maxlength: 20 },
+  Amount:   { type: Number },
+  MinAmount:       { type: Number},
+
+
+
+}, {
+  collection: 'ArticleTable',
+  timestamps: true,
+});
+
+
+
+
 
 module.exports = {
   BookingPracel: mongoose.model('BookingPracel', BookingPracelSchema),
   BookingPracelDet: mongoose.model('BookingPracelDet', BookingPracelDetSchema),
-  Userdetails:mongoose.model('Userdetails', UserDetailsSchema)
+  Userdetails:mongoose.model('Userdetails', UserDetailsSchema),
+  ArticleTable:mongoose.model('ArticleTable', ArticleTableSchema)
 };
 
