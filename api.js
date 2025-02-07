@@ -36,7 +36,7 @@ mongoose
 
 
 const userroutes = require('./routes')
-app.use("/",userroutes);
+app.use(userroutes);
 
 
 
