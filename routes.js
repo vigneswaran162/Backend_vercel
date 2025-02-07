@@ -1,92 +1,42 @@
 const express = require("express");
 const router = express.Router();
-const User = require("./model");
-const mongoose = require("mongoose");
+const { Userdetails } = require("./model");
+const jwt = require('jsonwebtoken'); // Ensure jwt is imported
 
-router.post("/create", async (req, res) => {
+router.get('/login', async function (req, res) {
+  const data = req.query;
   try {
-    console.log(req.body)
-
-    let loaddata = {
-      
-        name: "Vicky",
-        password: "vicky123",
-        email: "vigneswaran162@gmail.com"
-      
-      
-    }
-    const user = new User(loaddata);
-    await user.save();
-    res.status(201).json(user);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-
-router.get("/getall", async (req, res) => {
-  try {
-    const users = await User.find();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
-
-
-router.get("/example", async (req, res) => {
-  try {
-      const data = await someAsyncFunction();
-      res.json(data);
-  } catch (error) {
-      console.error("Error:", error);
-      res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-
-
-
-router.delete("/delete", async (req, res) => {
-    try {
-         
-   
+    let response = await Userdetails.find({
+      $or: [
+        { UserCode: data.UserName },
+        { UserName: data.UserName },
+        { EmailId: data.UserName }
+      ],
+      Password: data.Password
+    }).select('UserCode UserName PhoneNo BranchCode BranchName District state'); 
     
+    if (response.length > 0) {
+      let user = response[0].toObject();
+      const token = jwt.sign({ sub: data.UserName }, 'ADIMIN', { expiresIn: '1y' });
+      user.token = token;
 
-      let { _id } = req.query; 
-      const user = await User.findByIdAndDelete(new mongoose.Types.ObjectId(_id));
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-  
-      res.status(200).json({ message: "User deleted successfully" });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-
-
-  router.put("/update", async (req, res) => {
-    try {
-
-      let { _id } = req.query; 
-
-
-      const user = await User.findByIdAndUpdate(new mongoose.Types.ObjectId(_id), req.body, {
-        new: true,
-        runValidators: true, 
+      res.send({
+        Boolval: true,
+        Token: token,
+        userdata: [user]  
       });
-  
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-  
-      res.status(200).json({ message: "User updated successfully", user });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    } else {
+      res.status(200).send({
+        Boolval: false,
+        returnerror: "Incorrect UserName or Password"
+      });
     }
-  });
+  } catch (err) {
+    res.send({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+});
+
 module.exports = router;
