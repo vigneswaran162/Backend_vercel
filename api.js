@@ -36,7 +36,7 @@ mongoose
 
 
 const userroutes = require('./routes')
-app.use("/api/users",userroutes);
+app.use("/",userroutes);
 
 
 
