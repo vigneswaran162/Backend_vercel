@@ -64,13 +64,9 @@ router.get('/GetArticle', async function (req, res) {
 
 
 
-router.get('/GetArticle', async function (req, res) {
+router.get('/', async function (req, res) {
   try {
-
-  
-
-
-      res.send('hello')
+  res.send('hello')
   } catch (err) {
   
     res.status(500).json({
