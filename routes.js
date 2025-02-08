@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { Userdetails,ArticleTable } = require("./model");
-const jwt = require('jsonwebtoken'); // Ensure jwt is imported
+const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
 
 router.get('/login', async function (req, res) {
   const data = req.query;
@@ -60,6 +60,37 @@ router.get('/GetArticle', async function (req, res) {
   }
 }
 )
+
+
+
+
+
+router.get('/GetBranchCode', async (req, res) => {
+  try {
+
+    
+    let param = req.query
+    const users = await Userdetails.aggregate([
+      {
+        $match: { BranchCode: { $ne:param.BranchCode } } 
+      },
+      {
+        $project: {
+          UserCode: 1,
+          BranchCode: 1,
+          SearchField: { $concat: ["$BranchName", "-->", "$District"] } // Concatenate BranchName and District
+        }
+      }
+    ]);
+
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 
 
 
