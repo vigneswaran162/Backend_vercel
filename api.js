@@ -11,7 +11,8 @@ app.use(bodyParser.urlencoded({
     parameterLimit: 50000
 }))
 
-
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 app.use(cors({
     origin: '*',
     methods: 'GET, POST, PUT, DELETE',

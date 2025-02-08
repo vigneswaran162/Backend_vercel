@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { Userdetails,ArticleTable } = require("./model");
+const { Userdetails,ArticleTable,BookingPracel,BookingPracelDet } = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
+const mongoose = require("mongoose");
+
 
 router.get('/login', async function (req, res) {
   const data = req.query;
@@ -62,6 +64,70 @@ router.get('/GetArticle', async function (req, res) {
 )
 
 
+
+
+
+
+router.post('/BoookingInsert' , async function (req, res) {
+  const entity = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    console.log(entity,'VICKY');
+
+
+    const existingDoc = await BookingPracel.findOne({ DocNo: entity.DocNo }).session(session);
+    
+    if (existingDoc) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.send({
+        Boolval: false,
+        returnerror: "Doc No already exists",
+      });
+    }
+
+ const resp1 = await BookingPracel.create([entity], { session });
+
+    
+    if (entity.BookingDet && entity.BookingDet.length > 0) {
+      entity.BookingDet.forEach((det) => {
+        det.BookingPracelId = resp1[0]._id; 
+      });
+
+      await BookingPracelDet.insertMany(entity.BookingDet, { session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
+
+
+
+
+router.get('/GetDocNo' , async (req, res) => {
+  try {
+    const count = await BookingPracel.countDocuments();
+    res.status(200).json({ count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+})
 
 
 

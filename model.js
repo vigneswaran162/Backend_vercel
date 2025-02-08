@@ -30,7 +30,11 @@ const BookingPracelSchema = new Schema({
   DocNo:         { type: String, maxlength: 20 },
   DocDate:       { type: String, maxlength: 20 },
   PaymentMode:   { type: String, maxlength: 20 },
-  TotalAmount:   { type: Number }, // or use Decimal128 if needed
+  TotalAmount:   { type: Number }, 
+  FromPlace:     { type: String, maxlength: 60 },
+  ToBranchCode:     { type: String, maxlength: 10 },
+  FormBranchCode:     { type: String, maxlength:10 },
+
   FromPlace:     { type: String, maxlength: 60 },
   FromName:      { type: String, maxlength: 60 },
   FromPhoneNo:   { type: String, maxlength: 30 },
@@ -47,7 +51,8 @@ const BookingPracelSchema = new Schema({
   updatedBy:     { type: String, maxlength: 15 },
   updatedAt:     { type: Date },
   voidedBy:      { type: String, maxlength: 50 },
-  voidedAt:      { type: Date }
+  voidedAt:      { type: Date },
+  Status:     { type: String, maxlength:10 },
 }, {
   collection: 'BookingPracel_hdr',
   timestamps: true,
@@ -57,6 +62,9 @@ const BookingPracelSchema = new Schema({
 const BookingPracelDetSchema = new Schema({
   DocNo:         { type: String, maxlength: 20 },
   DocDate:       { type: String, maxlength: 20 },
+  ToBranchCode:     { type: String, maxlength: 10 },
+  FormBranchCode:     { type: String, maxlength:10 },
+  Status:     { type: String, maxlength:10 },
   PaymentMode:   { type: String, maxlength: 20 },
   Article:       { type: String, maxlength: 60 },
   Description:   { type: String, maxlength: 60 },
