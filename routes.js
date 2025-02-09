@@ -130,6 +130,29 @@ router.get('/GetDocNo' , async (req, res) => {
 })
 
 
+router.get('/GetAll' , async (req, res) => {
+  try {
+    const response = await BookingPracel.find();
+    res.status(200).json({ response });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+})
+
+
+router.get('/GetManagePracel', async (req, res) => {
+  try {
+    const param = req.query;
+ 
+    const response = await BookingPracel.find({ ToBranchCode: param.BranchCode });
+
+    res.status(200).json({ data:response,Boolval:true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 
 router.get('/GetBranchCode', async (req, res) => {
   try {
