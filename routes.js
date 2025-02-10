@@ -74,8 +74,6 @@ router.post('/BoookingInsert' , async function (req, res) {
   session.startTransaction();
 
   try {
-    console.log(entity,'VICKY');
-
 
     const existingDoc = await BookingPracel.findOne({ DocNo: entity.DocNo }).session(session);
     
@@ -154,10 +152,25 @@ router.get('/GetManagePracel', async (req, res) => {
 
 
 
+
+router.get('/GetReport', async (req, res) => {
+  let param = req.query
+  try {
+    const response = await BookingPracelDet.find({
+      createdAt: {
+        $gte: new Date(param.FromDate),
+        $lte: new Date(param.ToDate)
+      }
+    });
+    res.status(200).json({ data: response, Boolval: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 router.get('/GetBranchCode', async (req, res) => {
   try {
-
-    
     let param = req.query
     const users = await Userdetails.aggregate([
       {
@@ -167,7 +180,7 @@ router.get('/GetBranchCode', async (req, res) => {
         $project: {
           UserCode: 1,
           BranchCode: 1,
-          SearchField: { $concat: ["$BranchName", "-->", "$District"] } // Concatenate BranchName and District
+          SearchField: { $concat: ["$BranchName", "-->", "$District"] } 
         }
       }
     ]);
