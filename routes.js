@@ -243,7 +243,10 @@ router.post('/Addproducts' , async function (req, res) {
 
 router.get('/GetProductAll', async function (req, res) {
   try {
-    const response = await Addproduct.find({});
+    let param = req.query
+    console.log(param,'hello')
+    const response = await Addproduct.find({Category:param.Category});
+
     res.status(200).json({
       Boolval: true,
       data: response,
