@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { Userdetails,ArticleTable,BookingPracel,BookingPracelDet } = require("./model");
+const { Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct } = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
 const mongoose = require("mongoose");
 
@@ -209,5 +209,57 @@ router.get('/', async function (req, res) {
   }
 }
 )
+
+
+//add products
+
+
+
+router.post('/Addproducts' , async function (req, res) {
+  const entity = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const resp1 = await Addproduct.create([entity], { session });
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
+
+
+
+
+router.get('/GetProductAll', async function (req, res) {
+  try {
+    const response = await Addproduct.find({});
+    res.status(200).json({
+      Boolval: true,
+      data: response,
+      returnerror: ""
+    });
+  } catch (err) {
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+
+
 
 module.exports = router;

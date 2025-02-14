@@ -11,6 +11,9 @@ app.use(bodyParser.urlencoded({
     parameterLimit: 50000
 }))
 
+app.use(bodyParser.json({ limit: "50mb" })); 
+
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors({
