@@ -261,6 +261,26 @@ router.get('/GetProductAll', async function (req, res) {
 }
 )
 
+router.get('/GetProductLatestAll', async function (req, res) {
+  try {
+    let param = req.query
+    console.log(param,'hello')
+    const response = await Addproduct.find();
+
+    res.status(200).json({
+      Boolval: true,
+      data: response,
+      returnerror: ""
+    });
+  } catch (err) {
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
 
 
 
