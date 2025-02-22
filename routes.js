@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct } = require("./model");
+const { Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct ,orderdet,Address} = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
 const mongoose = require("mongoose");
 
@@ -150,9 +150,6 @@ router.get('/GetManagePracel', async (req, res) => {
   }
 });
 
-
-
-
 router.get('/GetReport', async (req, res) => {
   let param = req.query
   try {
@@ -239,6 +236,43 @@ router.post('/Addproducts' , async function (req, res) {
 })
 
 
+
+router.get('/GetOrderID' , async (req, res) => {
+  try {
+    const count = await Address.countDocuments();
+    let countnum = count+1 
+    let DocNo = 'ORD-00-'+countnum;
+    console.log(DocNo,'hello')
+    res.status(200).json({ orderid:DocNo });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+})
+
+
+router.post('/OrdersInsert' , async function (req, res) {
+  const entity = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const resp1 = await Address.create([entity], { session });
+    const resp2 = await orderdet.insertMany(entity.CartDet, { session });
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
 
 
 router.get('/GetProductAll', async function (req, res) {

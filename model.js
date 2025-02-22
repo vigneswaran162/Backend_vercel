@@ -131,6 +131,62 @@ const AddproductSchema = new Schema({
 
 
 
+const OrderSchema = new Schema({
+  orderId: { type: String, maxlength: 20  },
+  customerName: { type: String, maxlength: 100 },
+  ProductName: { type: String, maxlength: 40 },
+  Category: { type: String, maxlength: 40 },
+  Rate: { type: String, maxlength: 10 },
+  Quantity: { type: String, maxlength: 20 },
+  price: { type: String, maxlength: 20 },
+  CartQuantity: { type: String, maxlength: 60 },
+  createdBy: { type: String, maxlength: 50 },
+  createdAt: { type: Date },
+  updatedBy: { type: String, maxlength: 15 },
+  updatedAt: { type: Date },
+  voidedBy: { type: String, maxlength: 50 },
+  voidedAt: { type: Date }
+}, {
+  collection: 'OrderDetails',
+  timestamps: true,
+});
+
+
+
+
+const AddressSchema = new mongoose.Schema(
+  {
+    orderId: { type: String, maxlength: 20  },
+    Name: { type: String, maxlength: 100 },
+    PhoneNo: { type: String, maxlength: 15 },
+    APhoneNo: { type: String, maxlength: 15 }, // Alternate Phone Number
+    Address: { type: String, maxlength: 255 },
+    City: { type: String, maxlength: 100 },
+    PinCode: { type: String, maxlength: 10 },
+    State: { type: String, maxlength: 100 },
+    Country: { type: String, maxlength: 100 },
+    LandMark: { type: String, maxlength: 150 },
+    PaymentMode: { type: String, maxlength: 50 },
+    createdBy: { type: String, maxlength: 50 },
+    createdAt: { type: Date },
+    updatedBy: { type: String, maxlength: 15 },
+    updatedAt: { type: Date },
+    voidedBy: { type: String, maxlength: 50 },
+    voidedAt: { type: Date }
+  },
+  { collection: 'AddresssModel',
+    timestamps: true } // Adds createdAt & updatedAt automatically
+);
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -140,6 +196,10 @@ module.exports = {
   BookingPracelDet: mongoose.model('BookingPracelDet', BookingPracelDetSchema),
   Userdetails: mongoose.model('Userdetails', UserDetailsSchema),
   ArticleTable: mongoose.model('ArticleTable', ArticleTableSchema),
-  Addproduct:mongoose.model('Addproduct', AddproductSchema)
+  Addproduct:mongoose.model('Addproduct', AddproductSchema),
+  orderdet:mongoose.model('OrderDetails', OrderSchema),
+  Address:mongoose.model("AddresssModel", AddressSchema)
+
+
 };
 
