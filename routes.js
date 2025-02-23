@@ -475,4 +475,26 @@ router.get('/ValidateOtp', async (req, res) => {
 });
 
 
+
+router.post('/UpdatePassword' , async function (req, res) {
+  const entity = req.body;
+  try {
+    let response = await OrganicUserDetails.updateOne(
+      { Email: entity.Email },
+      { $set: { Password: entity.Password } } 
+  );    
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
+
+
+
 module.exports = router;
