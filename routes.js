@@ -456,4 +456,23 @@ router.post("/forgotpasswordOTP", async function (req, res) {
 });
 
 
+
+router.get('/ValidateOtp', async (req, res) => {
+  try {
+    let response = await forgotpassword.find();
+    return res.status(200).json({
+      Boolval: true,
+      data: response,
+      returnerror: ""
+    });
+  } catch (err) {
+    return res.status(500).json({
+      Boolval: false,
+
+      returnerror: err.message
+    });
+  }
+});
+
+
 module.exports = router;
