@@ -1,8 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct ,orderdet,Address} = require("./model");
+const {forgotpassword, Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails} = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
 const mongoose = require("mongoose");
+const nodemailer = require("nodemailer");
+
 
 
 router.get('/login', async function (req, res) {
@@ -10,18 +12,17 @@ router.get('/login', async function (req, res) {
   try {
     let response = await Userdetails.find({
       $or: [
-        { UserCode: data.UserName },
+        { PhoneNo: data.UserName },
         { UserName: data.UserName },
-        { EmailId: data.UserName }
+        { Email: data.UserName }
       ],
       Password: data.Password
-    }).select('UserCode UserName PhoneNo BranchCode BranchName District state'); 
+    }).select('UserName PhoneNo Email'); 
     
     if (response.length > 0) {
       let user = response[0].toObject();
       const token = jwt.sign({ sub: data.UserName }, 'ADIMIN', { expiresIn: '1y' });
       user.token = token;
-
       res.send({
         Boolval: true,
         Token: token,
@@ -315,8 +316,144 @@ router.get('/GetProductLatestAll', async (req, res) => {
 
 
 
+router.get('/Ecommercelogin', async function (req, res) {
+  const data = req.query;
+  console.log('login')
+  try {
+    let response = await OrganicUserDetails.find({
+      $or: [
+        { PhoneNo: data.UserName },
+        { UserName: data.UserName },
+        { Email: data.UserName }
+      ],
+      Password: data.Password
+    }).select('Email UserName PhoneNo '); 
+    
+    if (response.length > 0) {
+      let user = response[0].toObject();
+      const token = jwt.sign({ sub: data.UserName }, 'ADIMIN', { expiresIn: '1y' });
+      user.token = token;
+
+      res.send({
+        Boolval: true,
+        Token: token,
+        userdata: [user]  
+      });
+    } else {
+      res.status(200).send({
+        Boolval: false,
+        returnerror: "Incorrect UserName or Password"
+      });
+    }
+  } catch (err) {
+    res.send({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+});
+
+router.post('/Register' , async function (req, res) {
+  const entity = req.body;
+  const session = await  mongoose.startSession();
+  session.startTransaction();
+  try {
+    const resp1 = await OrganicUserDetails.create([entity], { session });
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
 
 
+
+
+router.get('/GetUserDetailsAll', async (req, res) => {
+  try {
+    let response = await OrganicUserDetails.find();
+    return res.status(200).json({
+      Boolval: true,
+      data: response,
+      returnerror: ""
+    });
+  } catch (err) {
+    return res.status(500).json({
+      Boolval: false,
+
+      returnerror: err.message
+    });
+  }
+});
+
+
+
+router.post("/forgotpasswordOTP", async function (req, res) {
+  const param = req.body;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    console.log("Received Request:", param);
+
+    const token = Math.floor(1000 + Math.random() * 9000); // 4-digit OTP
+
+    let entity = {
+      email: param.Email,
+      resetToken: token,
+      resetTokenExpires: new Date(Date.now() + 3600000), // 1-hour expiry
+    };
+
+    const resp1 = await forgotpassword.create([entity], { session });
+
+    // Configure email transport using environment variables
+    const transportmail = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    // Email message
+    const message = {
+      from: process.env.EMAIL_USER,
+      to: param.Email,
+      subject: "RESET PASSWORD - ORGANIC",
+      text: `Your OTP Number: ${token}`,
+    };
+
+    // Send email before committing the transaction
+    await transportmail.sendMail(message);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      Boolval: true,
+      msg: "Email sent successfully",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error:", err);
+
+    return res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+});
 
 
 module.exports = router;

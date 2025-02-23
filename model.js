@@ -182,13 +182,34 @@ const AddressSchema = new mongoose.Schema(
 
 
 
+const UserSchema = new mongoose.Schema(
+  {
+    UserName: { type: String, maxlength: 100 },
+    PhoneNo: { type: String, maxlength: 15 },
+    Email: { type: String, maxlength: 50 },
+    Password: { type: String, maxlength: 100 },
+    role: { type: String, maxlength: 100 },
+    Status: { type: String, maxlength: 50 },
+    createdBy: { type: String, maxlength: 50 },
+    createdAt: { type: Date },
+    updatedBy: { type: String, maxlength: 15 },
+    updatedAt: { type: Date },
+    voidedBy: { type: String, maxlength: 50 },
+    voidedAt: { type: Date }
+  },
+  { collection: 'organicUserDetails',
+    timestamps: true } 
+);
 
-
-
-
-
-
-
+const forgotpasswordSchema = new mongoose.Schema(
+  {
+    email: { type: String, maxlength: 100 },
+    resetToken: { type: String, maxlength: 15 },
+    resetTokenExpires: { type: String, maxlength: 200 },
+  },
+  { collection: 'forgotpassword',
+    timestamps: true } 
+);
 
 
 module.exports = {
@@ -198,7 +219,10 @@ module.exports = {
   ArticleTable: mongoose.model('ArticleTable', ArticleTableSchema),
   Addproduct:mongoose.model('Addproduct', AddproductSchema),
   orderdet:mongoose.model('OrderDetails', OrderSchema),
-  Address:mongoose.model("AddresssModel", AddressSchema)
+  Address:mongoose.model("AddresssModel", AddressSchema),
+  OrganicUserDetails:mongoose.model('organicUserDetails',UserSchema),
+  forgotpassword:mongoose.model('forgotpassword',forgotpasswordSchema)
+
 
 
 };
