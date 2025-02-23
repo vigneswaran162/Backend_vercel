@@ -483,6 +483,7 @@ router.post('/UpdatePassword' , async function (req, res) {
       { Email: entity.Email },
       { $set: { Password: entity.Password } } 
   );    
+  let response1 = await forgotpassword.findOneAndDelete({ email: entity.Email});
     return res.status(200).send({
       Boolval: true,
       returnerror: "",
