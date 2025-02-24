@@ -253,6 +253,7 @@ router.get('/GetOrderID' , async (req, res) => {
 
 router.post('/OrdersInsert' , async function (req, res) {
   const entity = req.body;
+  console.log(entity)
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -281,7 +282,6 @@ router.get('/GetProductAll', async function (req, res) {
     let param = req.query
     console.log(param,'hello')
     const response = await Addproduct.find({Category:param.Category});
-
     res.status(200).json({
       Boolval: true,
       data: response,

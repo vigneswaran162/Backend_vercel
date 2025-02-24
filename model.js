@@ -133,6 +133,7 @@ const AddproductSchema = new Schema({
 
 const OrderSchema = new Schema({
   orderId: { type: String, maxlength: 20  },
+  UserName: { type: String, maxlength: 100 },
   customerName: { type: String, maxlength: 100 },
   ProductName: { type: String, maxlength: 40 },
   Category: { type: String, maxlength: 40 },
@@ -140,6 +141,7 @@ const OrderSchema = new Schema({
   Quantity: { type: String, maxlength: 20 },
   price: { type: String, maxlength: 20 },
   CartQuantity: { type: String, maxlength: 60 },
+  status:{ type: String, maxlength: 20  },
   createdBy: { type: String, maxlength: 50 },
   createdAt: { type: Date },
   updatedBy: { type: String, maxlength: 15 },
@@ -149,6 +151,7 @@ const OrderSchema = new Schema({
 }, {
   collection: 'OrderDetails',
   timestamps: true,
+  strict: false 
 });
 
 
@@ -157,9 +160,10 @@ const OrderSchema = new Schema({
 const AddressSchema = new mongoose.Schema(
   {
     orderId: { type: String, maxlength: 20  },
+    UserName: { type: String, maxlength: 100 },
     Name: { type: String, maxlength: 100 },
     PhoneNo: { type: String, maxlength: 15 },
-    APhoneNo: { type: String, maxlength: 15 }, // Alternate Phone Number
+    APhoneNo: { type: String, maxlength: 15 },
     Address: { type: String, maxlength: 255 },
     City: { type: String, maxlength: 100 },
     PinCode: { type: String, maxlength: 10 },
@@ -175,7 +179,9 @@ const AddressSchema = new mongoose.Schema(
     voidedAt: { type: Date }
   },
   { collection: 'AddresssModel',
-    timestamps: true } // Adds createdAt & updatedAt automatically
+    timestamps: true ,
+    strict: false 
+  } // Adds createdAt & updatedAt automatically
 );
 
 
