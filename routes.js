@@ -498,4 +498,27 @@ router.post('/UpdatePassword' , async function (req, res) {
 
 
 
+router.get('/Getorders', async function (req, res) {
+  try {
+    let param = req.query
+
+    const resp1 = await Address.find({UserName:param.UserName});
+    const resp2 = await orderdet.find({UserName:param.UserName});
+
+    res.status(200).json({
+      Boolval: true,
+      data1: resp1,
+      data2:resp2,
+    });
+  } catch (err) {
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+
 module.exports = router;
