@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {forgotpassword, Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails} = require("./model");
+const {forgotpassword, Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel} = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
 const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
@@ -509,6 +509,70 @@ router.get('/Getorders', async function (req, res) {
       Boolval: true,
       data1: resp1,
       data2:resp2,
+    });
+  } catch (err) {
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+
+router.post('/AddEvents' , async function (req, res) {
+  const entity = req.body;
+  console.log(entity)
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const resp1 = await AddEventsModel.create([entity], { session });
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
+
+
+
+router.get('/GetEvents', async function (req, res) {
+  try {
+    const response = await AddEventsModel.find();
+    res.status(200).json({
+      Boolval: true,
+      data: response,
+      returnerror: ""
+    });
+  } catch (err) {
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+router.get('/EventsGetById', async function (req, res) {
+  try {
+    let param = req.query
+    const response = await AddEventsModel.find({EventNo:param.EventNo});
+    res.status(200).json({
+      Boolval: true,
+      data: response,
+      returnerror: ""
     });
   } catch (err) {
     res.status(500).json({

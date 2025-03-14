@@ -218,6 +218,40 @@ const forgotpasswordSchema = new mongoose.Schema(
 );
 
 
+
+
+
+const AddEventSchema = new mongoose.Schema({
+    EventNo: { type: String, maxlength: 50 },
+    EventTitle: { type: String, maxlength: 50 },
+    EventType: { type: String, maxlength: 20 },
+    EventDate: { type: String, maxlength: 20 },
+    EventLastDate: { type: String, maxlength: 20 },
+    StartTime: { type: String, maxlength: 20 },
+    EndTime: { type: String, maxlength: 20 },
+    EventThumbnailImage: {type: String }, // BLOB equivalent in MongoDB
+    EventMainImage: {type: String }, 
+    EventSummary: { type: String, maxlength: 1000 },
+    EventDetails: { type: String, maxlength: 3000 },
+    EventPlace: { type: String, maxlength: 100 },
+    PersonAllowed: { type: String, maxlength: 10 },
+    Void: { type: String, maxlength: 2 },
+    VoidedBy: { type: String, maxlength: 40 },
+    CreatedBy: { type: String, maxlength: 40 },
+    UpdatedBy: { type: String, maxlength: 40 },
+    Type: { type: String, maxlength: 20 },
+
+}, {
+    collection: 'AddEvent', // Setting the table/collection name
+    timestamps: true // Adds createdAt and updatedAt fields
+});
+
+
+
+
+
+
+
 module.exports = {
   BookingPracel: mongoose.model('BookingPracel', BookingPracelSchema),
   BookingPracelDet: mongoose.model('BookingPracelDet', BookingPracelDetSchema),
@@ -227,7 +261,8 @@ module.exports = {
   orderdet:mongoose.model('OrderDetails', OrderSchema),
   Address:mongoose.model("AddresssModel", AddressSchema),
   OrganicUserDetails:mongoose.model('organicUserDetails',UserSchema),
-  forgotpassword:mongoose.model('forgotpassword',forgotpasswordSchema)
+  forgotpassword:mongoose.model('forgotpassword',forgotpasswordSchema),
+  AddEventsModel:mongoose.model('AddEvent',AddEventSchema)
 
 
 
