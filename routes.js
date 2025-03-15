@@ -603,8 +603,7 @@ router.post("/RegisterEvent", async function (req, res) {
     Name: ${entity.FullName}
     Registration ID: ${entity.RegistrationID}
     Email: ${entity.EmailAddress}`;   
-    //  await generateQRCode(qrText, qrFilePath);
-    // const qrcFilePath = `${entity.EventTitle}_Tickect_QR.png`; 
+    await generateQRCode(qrText, qrFilePath);
 
 
     const transportmail = nodemailer.createTransport({
@@ -630,13 +629,13 @@ router.post("/RegisterEvent", async function (req, res) {
   
   Best regards,  
   The Event Team`
-//   ,
-//   attachments: [
-//     {
-//         filename: qrcFilePath,
-//         path: qrFilePath
-//     }
-// ]
+  ,
+  attachments: [
+    {
+        filename: 'qrcode.png',
+        path: qrFilePath
+    }
+]
   };
     await transportmail.sendMail(message);
     await session.commitTransaction();
