@@ -258,7 +258,8 @@ const RegistrationEventSchema = new mongoose.Schema({
   DOB: { type: Date },
   CollegeName: { type: String, maxlength: 100 },
   Department: { type: String, maxlength: 40 },
-  Void: { type: String, maxlength: 2 }
+  Void: { type: String, maxlength: 2 },
+  EventNo:{ type: String, maxlength: 50 }
 }, { collection: 'RegisterationEvent',
   timestamps: true 
  });

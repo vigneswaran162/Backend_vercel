@@ -362,6 +362,8 @@ router.post('/Register' , async function (req, res) {
   const session = await  mongoose.startSession();
   session.startTransaction();
   try {
+
+
     const resp1 = await OrganicUserDetails.create([entity], { session });
     await session.commitTransaction();
     session.endSession();
@@ -573,9 +575,12 @@ router.get('/EventsGetById', async function (req, res) {
   try {
     let param = req.query
     const response = await AddEventsModel.find({EventNo:param.EventNo});
+    const response1 = await RegisterationEvent.find({EventNo:param.EventNo});
+
     res.status(200).json({
       Boolval: true,
       data: response,
+      data2:response1,
       returnerror: ""
     });
   } catch (err) {
@@ -692,8 +697,11 @@ router.post("/RegisterEvent", async function (req, res) {
   session.startTransaction();
 
   try {
+    const count = await RegisterationEvent.countDocuments();
+    let countnum = count+1 
+    let DocNo = entity.EventTitle.slice(0, 3) + '/' + countnum + '/' + '2025';
+    entity.RegisterationID = DocNo;
       const resp1 = await RegisterationEvent.create([entity], { session });
-
       const qrText = `EventName: ${entity.EventTitle}
       Name: ${entity.FullName}
       Registration ID: ${entity.RegistrationID}
