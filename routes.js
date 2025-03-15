@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {forgotpassword, Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel} = require("./model");
+const {forgotpassword, Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel,RegisterationEvent} = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
 const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
@@ -582,6 +582,64 @@ router.get('/EventsGetById', async function (req, res) {
   }
 }
 )
+
+
+
+router.post("/RegisterEvent", async function (req, res) {
+  const entity = req.body;
+  console.log(entity)
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+
+
+    const resp1 = await RegisterationEvent.create([entity], { session });
+    await session.commitTransaction();
+
+
+    const transportmail = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    // Email message
+    const message = {
+      from: process.env.EMAIL_USER,
+      to: entity.EmailAddress,
+      subject: "🎉 Event Registration Confirmation",
+      text: `Dear ${entity.FullName},
+  
+  We are pleased to confirm your registration for **${entity.EventTitle}**.
+  
+  Thank you for signing up! We are excited to have you with us and look forward to an engaging and insightful event. If you have any questions or need assistance, please feel free to reach out.
+  
+  See you there!
+  
+  Best regards,  
+  The Event Team`
+  };
+    await transportmail.sendMail(message);
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(200).json({
+      Boolval: true,
+      msg: "Email sent successfully",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error:", err);
+    return res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+});
+
 
 
 

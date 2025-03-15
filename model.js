@@ -248,7 +248,20 @@ const AddEventSchema = new mongoose.Schema({
 
 
 
-
+const RegistrationEventSchema = new mongoose.Schema({
+  RegisterationID: { type: String, maxlength: 50 },
+  EventTitle: { type: String, maxlength: 100 },
+  RollNo: { type: String, maxlength: 20 },
+  FullName: { type: String, maxlength: 80 }, 
+  EmailAddress: { type: String, maxlength: 100 },
+  PhoneNo: { type: String, maxlength: 12 },
+  DOB: { type: Date },
+  CollegeName: { type: String, maxlength: 100 },
+  Department: { type: String, maxlength: 40 },
+  Void: { type: String, maxlength: 2 }
+}, { collection: 'RegisterationEvent',
+  timestamps: true 
+ });
 
 
 
@@ -262,7 +275,9 @@ module.exports = {
   Address:mongoose.model("AddresssModel", AddressSchema),
   OrganicUserDetails:mongoose.model('organicUserDetails',UserSchema),
   forgotpassword:mongoose.model('forgotpassword',forgotpasswordSchema),
-  AddEventsModel:mongoose.model('AddEvent',AddEventSchema)
+  AddEventsModel:mongoose.model('AddEvent',AddEventSchema),
+  RegisterationEvent:mongoose.model('RegisterationEvent',RegistrationEventSchema)
+
 
 
 
