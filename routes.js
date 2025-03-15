@@ -6,6 +6,10 @@ const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
 
 
+const QRCode = require('qrcode');
+const fs = require('fs');
+
+
 
 router.get('/login', async function (req, res) {
   const data = req.query;
@@ -592,10 +596,16 @@ router.post("/RegisterEvent", async function (req, res) {
   session.startTransaction();
 
   try {
-
-
     const resp1 = await RegisterationEvent.create([entity], { session });
     await session.commitTransaction();
+    const qrFilePath = 'qrcode.png';
+    const qrText = `EventName: ${entity.EventTitle}
+    Name: ${entity.FullName}
+    Registration ID: ${entity.RegistrationID}
+    Email: ${entity.EmailAddress}`;    await generateQRCode(qrText, qrFilePath);
+
+    const safeEventTitle = entity.EventTitle.replace(/\s+/g, '_'); 
+    const qrcFilePath = `${safeEventTitle}_Tickect_QR.png`; 
 
 
     const transportmail = nodemailer.createTransport({
@@ -620,7 +630,13 @@ router.post("/RegisterEvent", async function (req, res) {
   See you there!
   
   Best regards,  
-  The Event Team`
+  The Event Team`,
+  attachments: [
+    {
+        filename: qrcFilePath,
+        path: qrFilePath
+    }
+]
   };
     await transportmail.sendMail(message);
     await session.commitTransaction();
@@ -640,6 +656,16 @@ router.post("/RegisterEvent", async function (req, res) {
   }
 });
 
+
+
+const generateQRCode = async (text, filePath) => {
+    return new Promise((resolve, reject) => {
+        QRCode.toFile(filePath, text, { type: 'png' }, (err) => {
+            if (err) reject(err);
+            resolve(filePath);
+        });
+    });
+};
 
 
 
