@@ -604,8 +604,7 @@ router.post("/RegisterEvent", async function (req, res) {
     Registration ID: ${entity.RegistrationID}
     Email: ${entity.EmailAddress}`;    await generateQRCode(qrText, qrFilePath);
 
-    const safeEventTitle = entity.EventTitle.replace(/\s+/g, '_'); 
-    const qrcFilePath = `${safeEventTitle}_Tickect_QR.png`; 
+    const qrcFilePath = `${entity.EventTitle}_Tickect_QR.png`; 
 
 
     const transportmail = nodemailer.createTransport({
