@@ -589,87 +589,170 @@ router.get('/EventsGetById', async function (req, res) {
 
 
 
-router.post("/RegisterEvent", async function (req, res) {
+// router.post("/RegisterEvent", async function (req, res) {
 
+//   res.setHeader('Access-Control-Allow-Origin', '*');
+//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+//   const entity = req.body;
+//   console.log(entity)
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+
+//   try {
+//     const resp1 = await RegisterationEvent.create([entity], { session });
+//     await session.commitTransaction();
+//     const qrFilePath = 'qrcode.png';
+//     const qrText = `EventName: ${entity.EventTitle}
+//     Name: ${entity.FullName}
+//     Registration ID: ${entity.RegistrationID}
+//     Email: ${entity.EmailAddress}`;   
+//     await generateQRCode(qrText, qrFilePath);
+
+
+//     const transportmail = nodemailer.createTransport({
+//       service: "gmail",
+//       auth: {
+//         user: process.env.EMAIL_USER, 
+//         pass: process.env.EMAIL_PASS,
+//       },
+//     });
+
+//     // Email message
+//     const message = {
+//       from: process.env.EMAIL_USER,
+//       to: entity.EmailAddress,
+//       subject: "🎉 Event Registration Confirmation",
+//       text: `Dear ${entity.FullName},
+  
+//   We are pleased to confirm your registration for **${entity.EventTitle}**.
+  
+//   Thank you for signing up! We are excited to have you with us and look forward to an engaging and insightful event. If you have any questions or need assistance, please feel free to reach out.
+  
+//   See you there!
+  
+//   Best regards,  
+//   The Event Team`
+//   ,
+//   attachments: [
+//     {
+//         filename: 'qrcode.png',
+//         path: qrFilePath
+//     }
+// ]
+//   };
+//     await transportmail.sendMail(message);
+//     await session.commitTransaction();
+//     session.endSession();
+//     return res.status(200).json({
+//       Boolval: true,
+//       msg: "Email sent successfully",
+//     });
+//   } catch (err) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     console.error("Error:", err);
+//     return res.status(500).json({
+//       Boolval: false,
+//       returnerror: err.message
+//     });
+//   }
+// });
+
+
+
+// const generateQRCode = async (text, filePath) => {
+//     return new Promise((resolve, reject) => {
+//         QRCode.toFile(filePath, text, { type: 'png' }, (err) => {
+//             if (err) reject(err);
+//             resolve(filePath);
+//         });
+//     });
+// };
+
+
+const generateQRCode = async (text) => {
+  return new Promise((resolve, reject) => {
+      QRCode.toBuffer(text, { errorCorrectionLevel: 'L' }, (err, buffer) => {
+          if (err) reject(err);
+          resolve(buffer);
+      });
+  });
+};
+
+router.post("/RegisterEvent", async function (req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   const entity = req.body;
-  console.log(entity)
+  console.log(entity);
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const resp1 = await RegisterationEvent.create([entity], { session });
-    await session.commitTransaction();
-    const qrFilePath = 'qrcode.png';
-    const qrText = `EventName: ${entity.EventTitle}
-    Name: ${entity.FullName}
-    Registration ID: ${entity.RegistrationID}
-    Email: ${entity.EmailAddress}`;   
-    await generateQRCode(qrText, qrFilePath);
+      const resp1 = await RegisterationEvent.create([entity], { session });
 
+      const qrText = `EventName: ${entity.EventTitle}
+      Name: ${entity.FullName}
+      Registration ID: ${entity.RegistrationID}
+      Email: ${entity.EmailAddress}`;
+      
+      // Generate QR code as a buffer (no file system needed)
+      const qrCodeBuffer = await generateQRCode(qrText);
 
-    const transportmail = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+      const transportmail = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+              user: process.env.EMAIL_USER, 
+              pass: process.env.EMAIL_PASS,
+          },
+      });
 
-    // Email message
-    const message = {
-      from: process.env.EMAIL_USER,
-      to: entity.EmailAddress,
-      subject: "🎉 Event Registration Confirmation",
-      text: `Dear ${entity.FullName},
-  
-  We are pleased to confirm your registration for **${entity.EventTitle}**.
-  
-  Thank you for signing up! We are excited to have you with us and look forward to an engaging and insightful event. If you have any questions or need assistance, please feel free to reach out.
-  
-  See you there!
-  
-  Best regards,  
-  The Event Team`
-  ,
-  attachments: [
-    {
-        filename: 'qrcode.png',
-        path: qrFilePath
-    }
-]
-  };
-    await transportmail.sendMail(message);
-    await session.commitTransaction();
-    session.endSession();
-    return res.status(200).json({
-      Boolval: true,
-      msg: "Email sent successfully",
-    });
+      // Email message
+      const message = {
+          from: process.env.EMAIL_USER,
+          to: entity.EmailAddress,
+          subject: "🎉 Event Registration Confirmation",
+          text: `Dear ${entity.FullName},
+          
+          We are pleased to confirm your registration for **${entity.EventTitle}**.
+          
+          Thank you for signing up! We are excited to have you with us and look forward to an engaging and insightful event. If you have any questions or need assistance, please feel free to reach out.
+          
+          See you there!
+          
+          Best regards,  
+          The Event Team`,
+          attachments: [
+              {
+                  filename: 'qrcode.png',
+                  content: qrCodeBuffer,
+                  encoding: 'base64'
+              }
+          ]
+      };
+
+      await transportmail.sendMail(message);
+      await session.commitTransaction();
+      session.endSession();
+
+      return res.status(200).json({
+          Boolval: true,
+          msg: "Email sent successfully",
+      });
+
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error("Error:", err);
-    return res.status(500).json({
-      Boolval: false,
-      returnerror: err.message
-    });
+      await session.abortTransaction();
+      session.endSession();
+      console.error("Error:", err);
+      return res.status(500).json({
+          Boolval: false,
+          returnerror: err.message
+      });
   }
 });
-
-
-
-const generateQRCode = async (text, filePath) => {
-    return new Promise((resolve, reject) => {
-        QRCode.toFile(filePath, text, { type: 'png' }, (err) => {
-            if (err) reject(err);
-            resolve(filePath);
-        });
-    });
-};
 
 
 
