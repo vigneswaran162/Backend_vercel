@@ -553,6 +553,46 @@ router.post('/AddEvents' , async function (req, res) {
 
 
 
+
+
+router.post("/UpdateEvent", async function (req, res) {
+  const entity = req.body; 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const resp1 = await AddEventsModel.findOneAndUpdate(
+      { EventNo: entity.EventNo }, 
+      entity,
+      { new: true, session } 
+    );
+
+    if (!resp1) {
+      throw new Error("Event not found");
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+      updatedEvent: resp1,
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.status(500).send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+});
+
+
+
+
 router.get('/GetEvents', async function (req, res) {
   try {
     const response = await AddEventsModel.find();
