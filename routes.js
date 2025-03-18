@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const {forgotpassword, Userdetails,ArticleTable,BookingPracel,BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel,RegisterationEvent} = require("./model");
+const {forgotpassword, Userdetails,ArticleTable,BookingPracel,YearfolderSchema,
+  BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel,RegisterationEvent} = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
 const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
@@ -533,6 +534,19 @@ router.post('/AddEvents' , async function (req, res) {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
+    const existingEvent = await AddEventsModel.findOne({ EventNo: entity.EventNo }).session(session);
+    
+    if (existingEvent) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).send({
+        Boolval: false,
+        returnerror: "Event No already exists",
+      });
+    }
+
+
+
     const resp1 = await AddEventsModel.create([entity], { session });
     await session.commitTransaction();
     session.endSession();
@@ -801,6 +815,61 @@ router.post("/RegisterEvent", async function (req, res) {
       });
   }
 });
+
+
+
+router.get('/GetFolder' , async function (req, res) {
+  try {
+    const response = await YearfolderSchema.find();
+    res.status(200).json({
+      Boolval: true,
+      data: response,
+      returnerror: ""
+    });
+  } catch (err) {
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+})
+
+
+router.post('/AddFolder' , async function (req, res) {
+  const entity = req.body;
+  console.log(entity)
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const existingEvent = await YearfolderSchema.findOne({ YearName: entity.YearName }).session(session);
+    
+    if (existingEvent) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.send({
+        Boolval: false,
+        returnerror: "Year already exists",
+        message:"Year already exists"
+      });
+    }
+
+    const resp1 = await YearfolderSchema.create([entity], { session });
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
 
 
 

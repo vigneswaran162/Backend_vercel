@@ -264,6 +264,16 @@ const RegistrationEventSchema = new mongoose.Schema({
   timestamps: true 
  });
 
+ const YearfolderSchema = new mongoose.Schema({
+  YearName: { type: String, maxlength: 50 },
+  createdBy: { type: String, maxlength: 100 },
+  RollNo: { type: String, maxlength: 20 },
+  Void: { type: String, maxlength: 2 },
+}, { collection: 'Yearfolder',
+  timestamps: true 
+ });
+
+
 
 
 module.exports = {
@@ -277,7 +287,9 @@ module.exports = {
   OrganicUserDetails:mongoose.model('organicUserDetails',UserSchema),
   forgotpassword:mongoose.model('forgotpassword',forgotpasswordSchema),
   AddEventsModel:mongoose.model('AddEvent',AddEventSchema),
-  RegisterationEvent:mongoose.model('RegisterationEvent',RegistrationEventSchema)
+  RegisterationEvent:mongoose.model('RegisterationEvent',RegistrationEventSchema),
+  YearfolderSchema:mongoose.model('Yearfolder',YearfolderSchema)
+
 
 
 
