@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const type = require('mongoose/lib/schema/operators/type');
 const { Schema } = mongoose;
 
 const UserDetailsSchema = new Schema({
@@ -273,7 +274,80 @@ const RegistrationEventSchema = new mongoose.Schema({
   timestamps: true 
  });
 
+//bus Booking
 
+const LocationSchema = new mongoose.Schema({
+  LocationCode: { type: String, maxlength: 20 },
+  LocationName: { type: String, maxlength: 100 },
+  Void: { type: String, maxlength: 2 },
+}, { collection: 'LocationMaster',
+  timestamps: true 
+ });
+
+
+
+ const VendorSchema = new mongoose.Schema({
+  VendorID: { type: String, maxlength: 50 },
+  VendorName: { type: String, maxlength: 100 },
+  EmailAddress: { type: String, maxlength: 100 },
+  PhoneNumber: { type: String, maxlength: 20 },
+  Void: { type: String, maxlength: 2 },
+}, { collection: 'VendorMaster',
+  timestamps: true 
+ });
+
+
+
+ const ScheduleSchema = new mongoose.Schema({
+  ScheduleID: { type:String },
+  VendorID: { type: String },
+  BusName: { type: String, maxlength: 100 },
+  BusVehicleNo: { type: String, maxlength: 50 },
+  FromLocation: { type: String },
+  ToLocation: { type: String },
+  DepartureTime: { type: String },
+  ArrivalTime: { type: String },
+  ScheduleDate: { type: Date },
+  Price: { type: Number },
+  TotalSeats: { type: Number },
+  AvailableSeats:{type:Number}
+}, {
+  collection: 'ScheduleMaster',
+  timestamps: true
+});
+
+
+const BusBookingPassengerSchema = new mongoose.Schema({
+  passengerEmailId: { type: String},
+  bookingId: { type: String, required: true },
+  passengerName: { type: String, required: true },
+  age: { type: Number, required: true },
+  gender: { type: String, required: true },
+  seatNo: { type: String, required: true },
+  Price:{ type: String, required: true },
+
+}, {
+  collection: 'BusBookingPassenger',
+  timestamps: true
+});
+
+const BookingSchema = new mongoose.Schema({
+  bookingId: { type:String, required: true },
+  custId: { type: String, required: true },
+  bookingDate: { type: Date, required: true },
+  scheduleId: { type: String, required: true },
+  PickupPoint: { type: String },
+  DropPoint: { type: String },
+  EmailAddress: { type: String, required: true },
+  PhoneNo: { type: String, required: true },
+  TotalAmount: { type: String, required: true },
+  PaymentMode:{ type: String },
+  busBookingPassengers: [BusBookingPassengerSchema]
+}
+, {
+  collection: 'BusBookingMaster',
+  timestamps: true
+});
 
 
 module.exports = {
@@ -288,8 +362,12 @@ module.exports = {
   forgotpassword:mongoose.model('forgotpassword',forgotpasswordSchema),
   AddEventsModel:mongoose.model('AddEvent',AddEventSchema),
   RegisterationEvent:mongoose.model('RegisterationEvent',RegistrationEventSchema),
-  YearfolderSchema:mongoose.model('Yearfolder',YearfolderSchema)
-
+  YearfolderSchema:mongoose.model('Yearfolder',YearfolderSchema),
+  VendorSchema:mongoose.model('VendorSchema',VendorSchema),
+  LocationSchema:mongoose.model('LocationSchema',LocationSchema),
+  ScheduleSchema:mongoose.model('ScheduleSchema',ScheduleSchema),
+  BusBookingPassengerSchema:mongoose.model('BusBookingPassengerSchema',BusBookingPassengerSchema),
+  BookingSchema:mongoose.model('BookingSchema',BookingSchema),
 
 
 

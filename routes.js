@@ -10,6 +10,8 @@ const nodemailer = require("nodemailer");
 const QRCode = require('qrcode');
 const fs = require('fs');
 
+const {VendorSchema,LocationSchema,ScheduleSchema,BookingSchema} = require("./model")
+
 
 
 router.get('/login', async function (req, res) {
@@ -872,5 +874,152 @@ router.post('/AddFolder' , async function (req, res) {
 })
 
 
+
+router.get('/GetLocationDetails', async function (req, res) {
+  try {
+  let resp = await LocationSchema.find({});
+    res.status(200).json({
+      Boolval: true,
+      data: resp,
+      returnerror: ""
+    });
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+router.get('/GetVendorDetails', async function (req, res) {
+  try {
+    let resp = await VendorSchema.find({});
+    res.status(200).json({
+      Boolval: true,
+      data: resp,
+      returnerror: ""
+    });
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+router.post('/Schedule' , async function (req, res) {
+  const entity = req.body;
+  console.log(entity)
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const existingEvent = await ScheduleSchema.findOne({ ScheduleID: entity.Entity.ScheduleID }).session(session);
+    
+    if (existingEvent) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.send({
+        Boolval: false,
+        returnerror: "ScheduleID exists",
+      });
+    }
+
+    const resp1 = await ScheduleSchema.create([entity.Entity], { session });
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
+
+
+
+
+
+
+
+
+
+router.get('/GetBusSearch', async function (req, res) {
+  try {
+    let param = req.query
+    let resp = await ScheduleSchema.find({FromLocation:param.FromLocation,ToLocation:param.ToLocation,ScheduleDate:param.ScheduleDate});
+    res.status(200).json({
+      Boolval: true,
+      data: resp,
+      returnerror: ""
+    });
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+router.get('/GetScheduleDetail', async function (req, res) {
+  try {
+    let param = req.query
+
+    console.log(param,'hello')
+    let resp = await ScheduleSchema.findOne({ScheduleID:param.ScheduleID});
+    res.status(200).json({
+      Boolval: true,
+      data: resp,
+      returnerror: ""
+    });
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+
+
+router.post('/BusBooking' , async function (req, res) {
+  const entity = req.body;
+  console.log(entity)
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const resp1 = await BookingSchema.create([entity.Entity], { session });
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(200).send({
+      Boolval: true,
+      returnerror: "",
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    return res.send({
+      Boolval: false,
+      returnerror: err.message,
+    });
+  }
+})
 
 module.exports = router;
