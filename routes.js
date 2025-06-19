@@ -1022,4 +1022,39 @@ router.post('/BusBooking' , async function (req, res) {
   }
 })
 
+
+
+
+
+
+router.get('/GetBookedSeats', async function (req, res) {
+  try {
+  let param = req.query
+  const result = await BookingSchema.aggregate([
+  { $match: { scheduleId: "S-1235" } },
+  { $unwind: "$busBookingPassengers" },
+  {
+    $group: {
+      _id: "$scheduleId",
+      seatNumbers: { $addToSet: "$busBookingPassengers.seatNo" }
+    }
+  }
+]);
+
+console.log(result);
+    res.status(200).json({
+      Boolval: true,
+      data: result,
+      returnerror: ""
+    });
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
 module.exports = router;
