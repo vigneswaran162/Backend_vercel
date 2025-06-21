@@ -12,6 +12,7 @@ const fs = require('fs');
 
 const {VendorSchema,LocationSchema,ScheduleSchema,BookingSchema} = require("./model")
 
+const Razorpay = require("razorpay")
 
 
 router.get('/login', async function (req, res) {
@@ -1031,7 +1032,7 @@ router.get('/GetBookedSeats', async function (req, res) {
   try {
   let param = req.query
   const result = await BookingSchema.aggregate([
-  { $match: { scheduleId: "S-1235" } },
+  { $match: { scheduleId: param.ScheduleID } },
   { $unwind: "$busBookingPassengers" },
   {
     $group: {
@@ -1056,5 +1057,43 @@ console.log(result);
   }
 }
 )
+
+
+
+
+router.post('/CreateOrder', async function (req, res) {
+  try {
+  let param = req.query
+ 
+   const razorpay = new Razorpay({
+    key_id:"rzp_test_AApuZR0yWRvZ5T",
+    key_secret:"sYxU4gVHXlaWWFw7BYtdblB2"
+   })
+
+    const options = {
+      amount:req.body.amount * 100,
+      currency:"INR",
+      receipt:"order_recptid_11"
+    } 
+
+   let resp = await razorpay.orders.create(options)
+
+  res.status(200).json({
+      Boolval:true, 
+      data:resp,
+      returnerror: err.message
+    });
+
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
 
 module.exports = router;
