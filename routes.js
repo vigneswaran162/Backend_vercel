@@ -959,7 +959,7 @@ router.post('/Schedule' , async function (req, res) {
 router.get('/GetBusSearch', async function (req, res) {
   try {
     let param = req.query
-    let resp = await ScheduleSchema.find({FromLocation:param.FromLocation,ToLocation:param.ToLocation,ScheduleDate:param.ScheduleDate});
+    let resp = await ScheduleSchema.find({FromLocation:param.FromLocation,ToLocation:param.ToLocation});
     res.status(200).json({
       Boolval: true,
       data: resp,
