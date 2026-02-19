@@ -350,6 +350,21 @@ const BookingSchema = new mongoose.Schema({
 });
 
 
+
+
+const ProgramMaster = new mongoose.Schema({
+  Title: { type:String, required: true },
+  Input: { type: String, required: true },
+  Output: { type: Date, required: true },
+  Program: { type: String, required: true },
+  PickupPoint: { type: String },
+  Void: { type: String }
+}
+, {
+  collection: 'ProgramMaster',
+  timestamps: true
+});
+
 module.exports = {
   BookingPracel: mongoose.model('BookingPracel', BookingPracelSchema),
   BookingPracelDet: mongoose.model('BookingPracelDet', BookingPracelDetSchema),
@@ -368,6 +383,7 @@ module.exports = {
   ScheduleSchema:mongoose.model('ScheduleSchema',ScheduleSchema),
   BusBookingPassengerSchema:mongoose.model('BusBookingPassengerSchema',BusBookingPassengerSchema),
   BookingSchema:mongoose.model('BookingSchema',BookingSchema),
+  ProgramMaster:mongoose.model('BookingSchema',ProgramMaster),
 
 
 

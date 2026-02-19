@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const {forgotpassword, Userdetails,ArticleTable,BookingPracel,YearfolderSchema,
-  BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel,RegisterationEvent} = require("./model");
+  BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel,RegisterationEvent,
+  ProgramMaster} = require("./model");
 const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
 const mongoose = require("mongoose");
 const nodemailer = require("nodemailer");
@@ -898,6 +899,27 @@ router.get('/GetLocationDetails', async function (req, res) {
 router.get('/GetVendorDetails', async function (req, res) {
   try {
     let resp = await VendorSchema.find({});
+    res.status(200).json({
+      Boolval: true,
+      data: resp,
+      returnerror: ""
+    });
+  } catch (err) {
+  
+    res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
+  }
+}
+)
+
+
+
+
+router.get('/GetAllPrograms', async function (req, res) {
+  try {
+    let resp = await ProgramMaster.find({});
     res.status(200).json({
       Boolval: true,
       data: resp,
