@@ -258,10 +258,15 @@ const RegistrationEventSchema = new mongoose.Schema({
   CollegeName: { type: String, maxlength: 100 },
   Department: { type: String, maxlength: 40 },
   Void: { type: String, maxlength: 2 },
-  EventNo:{ type: String, maxlength: 50 }
+  EventNo:{ type: String, maxlength: 50 },
+  CheckedIn: { type: Boolean, default: false },
+  CheckedInAt: { type: Date },
+  CheckedInBy: { type: String, maxlength: 60 }
 }, { collection: 'RegisterationEvent',
   timestamps: true 
  });
+
+RegistrationEventSchema.index({ EventNo: 1, RollNo: 1 });
 
  const YearfolderSchema = new mongoose.Schema({
   YearName: { type: String, maxlength: 50 },

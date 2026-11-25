@@ -6,6 +6,7 @@ const {forgotpassword, Userdetails,ArticleTable,BookingPracel,YearfolderSchema,
 const { Announcement, ANNOUNCEMENT_LABELS } = require("./model");
 const jwt = require('jsonwebtoken');
 const { router: adminAuthRouter, requireAdmin } = require('./adminAuth');
+const { router: eventOpsRouter, registrationBlocker } = require('./eventOps');
 const mongoose = require("mongoose");
 
 const {VendorSchema,LocationSchema,ScheduleSchema,BookingSchema} = require("./model")
@@ -570,14 +571,29 @@ router.post("/RegisterEvent", async function (req, res) {
   session.startTransaction();
 
   try {
+    // Server-side rules: event exists, registration open (deadline / seats / status), no duplicate roll number.
+    // Business-rule rejections use HTTP 200 + Boolval:false so the page can show the message.
+    const blocked = await registrationBlocker(entity, session);
+    if (blocked) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(200).json({ Boolval: false, returnerror: blocked });
+    }
+    // Attendance fields can only be set by the check-in screen.
+    delete entity.CheckedIn; delete entity.CheckedInAt; delete entity.CheckedInBy; delete entity.Void;
+
     const count = await RegisterationEvent.countDocuments();
-    const DocNo = entity.EventTitle.slice(0, 3) + '/' + (count + 1) + '/' + '2025';
+    const prefix = entity.EventTitle.slice(0, 3);
+    let seq = count + 1;
+    let DocNo = prefix + '/' + seq + '/' + '2025';
+    // Counting alone can repeat an id after a deletion; keep it unique.
+    while (await RegisterationEvent.exists({ RegisterationID: DocNo }).session(session)) {
+      seq += 1;
+      DocNo = prefix + '/' + seq + '/' + '2025';
+    }
     entity.RegisterationID = DocNo;
     await RegisterationEvent.create([entity], { session });
-    const qrText = `EventName: ${entity.EventTitle}
-      Name: ${entity.FullName}
-      Registration ID: ${entity.RegistrationID}
-      Email: ${entity.EmailAddress}`;
+    const qrText = `EventName: ${entity.EventTitle}\nName: ${entity.FullName}\nRegistration ID: ${entity.RegisterationID}\nRoll No: ${entity.RollNo}\nEmail: ${entity.EmailAddress}`;
 
     // Generate QR code as a buffer (no file system needed)
     const qrCodeBuffer = await require('qrcode').toBuffer(qrText, { errorCorrectionLevel: 'L' });
@@ -993,6 +1009,9 @@ router.delete('/DeleteAnnouncement', async function (req, res) {
     res.status(500).json({ Boolval: false, returnerror: err.message });
   }
 });
+
+// Seat availability (public), check-in and dashboard (admin) -> /api/availability, /api/checkin, /api/dashboard
+router.use('/api', eventOpsRouter);
 
 // Admin sign-in -> /api/admin/login, /api/admin/me
 router.use('/api/admin', adminAuthRouter);
