@@ -3,39 +3,60 @@ const router = express.Router();
 const {forgotpassword, Userdetails,ArticleTable,BookingPracel,YearfolderSchema,
   BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel,RegisterationEvent,
   ProgramMaster} = require("./model");
-const jwt = require('jsonwebtoken'); // Ensure jwt is importedUserdetails
+const jwt = require('jsonwebtoken');
 const mongoose = require("mongoose");
-const nodemailer = require("nodemailer");
-
-
-const QRCode = require('qrcode');
-const fs = require('fs');
 
 const {VendorSchema,LocationSchema,ScheduleSchema,BookingSchema} = require("./model")
 
-const Razorpay = require("razorpay")
+// Heavy, rarely-used libraries are loaded lazily to keep serverless cold starts short.
+let mailTransport;
+const getMailTransport = () => {
+  if (!mailTransport) {
+    mailTransport = require("nodemailer").createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+  }
+  return mailTransport;
+};
 
+let razorpay;
+const getRazorpay = () => {
+  if (!razorpay) {
+    const Razorpay = require("razorpay");
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_AApuZR0yWRvZ5T",
+      key_secret: process.env.RAZORPAY_KEY_SECRET || "sYxU4gVHXlaWWFw7BYtdblB2"
+    });
+  }
+  return razorpay;
+};
 
-router.get('/login', async function (req, res) {
+const JWT_SECRET = process.env.JWT_SECRET || 'ADIMIN';
+
+// Shared login logic (identical for both login endpoints).
+async function loginWith(Model, fields, req, res) {
   const data = req.query;
   try {
-    let response = await Userdetails.find({
+    const user = await Model.findOne({
       $or: [
         { PhoneNo: data.UserName },
         { UserName: data.UserName },
         { Email: data.UserName }
       ],
       Password: data.Password
-    }).select('UserName PhoneNo Email'); 
-    
-    if (response.length > 0) {
-      let user = response[0].toObject();
-      const token = jwt.sign({ sub: data.UserName }, 'ADIMIN', { expiresIn: '1y' });
+    }).select(fields).lean();
+
+    if (user) {
+      const token = jwt.sign({ sub: data.UserName }, JWT_SECRET, { expiresIn: '1y' });
       user.token = token;
       res.send({
         Boolval: true,
         Token: token,
-        userdata: [user]  
+        userdata: [user]
       });
     } else {
       res.status(200).send({
@@ -49,22 +70,20 @@ router.get('/login', async function (req, res) {
       returnerror: err.message
     });
   }
-});
+}
 
-
-
+router.get('/login', (req, res) => loginWith(Userdetails, 'UserName PhoneNo Email', req, res));
 
 
 router.get('/GetArticle', async function (req, res) {
   try {
-    const articles = await ArticleTable.find({});
+    const articles = await ArticleTable.find({}).lean();
     res.status(200).json({
       Boolval: true,
       data: articles,
       returnerror: ""
     });
   } catch (err) {
-  
     res.status(500).json({
       Boolval: false,
       returnerror: err.message
@@ -74,10 +93,7 @@ router.get('/GetArticle', async function (req, res) {
 )
 
 
-
-
-
-
+// Multi-document write: keeps its transaction.
 router.post('/BoookingInsert' , async function (req, res) {
   const entity = req.body;
   const session = await mongoose.startSession();
@@ -86,7 +102,7 @@ router.post('/BoookingInsert' , async function (req, res) {
   try {
 
     const existingDoc = await BookingPracel.findOne({ DocNo: entity.DocNo }).session(session);
-    
+
     if (existingDoc) {
       await session.abortTransaction();
       session.endSession();
@@ -96,12 +112,11 @@ router.post('/BoookingInsert' , async function (req, res) {
       });
     }
 
- const resp1 = await BookingPracel.create([entity], { session });
+    const resp1 = await BookingPracel.create([entity], { session });
 
-    
     if (entity.BookingDet && entity.BookingDet.length > 0) {
       entity.BookingDet.forEach((det) => {
-        det.BookingPracelId = resp1[0]._id; 
+        det.BookingPracelId = resp1[0]._id;
       });
 
       await BookingPracelDet.insertMany(entity.BookingDet, { session });
@@ -126,8 +141,6 @@ router.post('/BoookingInsert' , async function (req, res) {
 })
 
 
-
-
 router.get('/GetDocNo' , async (req, res) => {
   try {
     const count = await BookingPracel.countDocuments();
@@ -140,7 +153,7 @@ router.get('/GetDocNo' , async (req, res) => {
 
 router.get('/GetAll' , async (req, res) => {
   try {
-    const response = await BookingPracel.find();
+    const response = await BookingPracel.find().lean();
     res.status(200).json({ data:response });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -151,8 +164,8 @@ router.get('/GetAll' , async (req, res) => {
 router.get('/GetManagePracel', async (req, res) => {
   try {
     const param = req.query;
- 
-    const response = await BookingPracel.find({ ToBranchCode: param.BranchCode });
+
+    const response = await BookingPracel.find({ ToBranchCode: param.BranchCode }).lean();
 
     res.status(200).json({ data:response,Boolval:true });
   } catch (error) {
@@ -161,14 +174,14 @@ router.get('/GetManagePracel', async (req, res) => {
 });
 
 router.get('/GetReport', async (req, res) => {
-  let param = req.query
+  const param = req.query
   try {
     const response = await BookingPracelDet.find({
       createdAt: {
         $gte: new Date(param.FromDate),
         $lte: new Date(param.ToDate)
       }
-    });
+    }).lean();
     res.status(200).json({ data: response, Boolval: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -178,16 +191,16 @@ router.get('/GetReport', async (req, res) => {
 
 router.get('/GetBranchCode', async (req, res) => {
   try {
-    let param = req.query
+    const param = req.query
     const users = await Userdetails.aggregate([
       {
-        $match: { BranchCode: { $ne:param.BranchCode } } 
+        $match: { BranchCode: { $ne:param.BranchCode } }
       },
       {
         $project: {
           UserCode: 1,
           BranchCode: 1,
-          SearchField: { $concat: ["$BranchName", "-->", "$District"] } 
+          SearchField: { $concat: ["$BranchName", "-->", "$District"] }
         }
       }
     ]);
@@ -199,45 +212,22 @@ router.get('/GetBranchCode', async (req, res) => {
 });
 
 
-
-
-
-
-
-router.get('/', async function (req, res) {
-  try {
+router.get('/', (req, res) => {
   res.send('hello')
-  } catch (err) {
-  
-    res.status(500).json({
-      Boolval: false,
-      returnerror: err.message
-    });
-  }
-}
-)
+})
 
 
 //add products
 
-
-
 router.post('/Addproducts' , async function (req, res) {
-  const entity = req.body;
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const resp1 = await Addproduct.create([entity], { session });
-    await session.commitTransaction();
-    session.endSession();
+    // Single-document insert is already atomic; no session/transaction needed.
+    await Addproduct.create(req.body);
     return res.status(200).send({
       Boolval: true,
       returnerror: "",
     });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-
     return res.send({
       Boolval: false,
       returnerror: err.message,
@@ -250,9 +240,7 @@ router.post('/Addproducts' , async function (req, res) {
 router.get('/GetOrderID' , async (req, res) => {
   try {
     const count = await Address.countDocuments();
-    let countnum = count+1 
-    let DocNo = 'ORD-00-'+countnum;
-    console.log(DocNo,'hello')
+    const DocNo = 'ORD-00-' + (count + 1);
     res.status(200).json({ orderid:DocNo });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -260,14 +248,14 @@ router.get('/GetOrderID' , async (req, res) => {
 })
 
 
+// Two collections written together: keeps its transaction.
 router.post('/OrdersInsert' , async function (req, res) {
   const entity = req.body;
-  console.log(entity)
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const resp1 = await Address.create([entity], { session });
-    const resp2 = await orderdet.insertMany(entity.CartDet, { session });
+    await Address.create([entity], { session });
+    await orderdet.insertMany(entity.CartDet, { session });
     await session.commitTransaction();
     session.endSession();
     return res.status(200).send({
@@ -288,9 +276,7 @@ router.post('/OrdersInsert' , async function (req, res) {
 
 router.get('/GetProductAll', async function (req, res) {
   try {
-    let param = req.query
-    console.log(param,'hello')
-    const response = await Addproduct.find({Category:param.Category});
+    const response = await Addproduct.find({Category:req.query.Category}).lean();
     res.status(200).json({
       Boolval: true,
       data: response,
@@ -307,7 +293,7 @@ router.get('/GetProductAll', async function (req, res) {
 
 router.get('/GetProductLatestAll', async (req, res) => {
   try {
-    let response = await Addproduct.find({ Latest: 'Y' });
+    const response = await Addproduct.find({ Latest: 'Y' }).lean();
 
     return res.status(200).json({
       Boolval: true,
@@ -325,61 +311,16 @@ router.get('/GetProductLatestAll', async (req, res) => {
 
 
 
-router.get('/Ecommercelogin', async function (req, res) {
-  const data = req.query;
-  console.log('login')
-  try {
-    let response = await OrganicUserDetails.find({
-      $or: [
-        { PhoneNo: data.UserName },
-        { UserName: data.UserName },
-        { Email: data.UserName }
-      ],
-      Password: data.Password
-    }).select('Email UserName PhoneNo '); 
-    
-    if (response.length > 0) {
-      let user = response[0].toObject();
-      const token = jwt.sign({ sub: data.UserName }, 'ADIMIN', { expiresIn: '1y' });
-      user.token = token;
-
-      res.send({
-        Boolval: true,
-        Token: token,
-        userdata: [user]  
-      });
-    } else {
-      res.status(200).send({
-        Boolval: false,
-        returnerror: "Incorrect UserName or Password"
-      });
-    }
-  } catch (err) {
-    res.send({
-      Boolval: false,
-      returnerror: err.message
-    });
-  }
-});
+router.get('/Ecommercelogin', (req, res) => loginWith(OrganicUserDetails, 'Email UserName PhoneNo', req, res));
 
 router.post('/Register' , async function (req, res) {
-  const entity = req.body;
-  const session = await  mongoose.startSession();
-  session.startTransaction();
   try {
-
-
-    const resp1 = await OrganicUserDetails.create([entity], { session });
-    await session.commitTransaction();
-    session.endSession();
+    await OrganicUserDetails.create(req.body);
     return res.status(200).send({
       Boolval: true,
       returnerror: "",
     });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-
     return res.send({
       Boolval: false,
       returnerror: err.message,
@@ -389,10 +330,9 @@ router.post('/Register' , async function (req, res) {
 
 
 
-
 router.get('/GetUserDetailsAll', async (req, res) => {
   try {
-    let response = await OrganicUserDetails.find();
+    const response = await OrganicUserDetails.find().lean();
     return res.status(200).json({
       Boolval: true,
       data: response,
@@ -409,43 +349,30 @@ router.get('/GetUserDetailsAll', async (req, res) => {
 
 
 
+// Insert + email must succeed together, so the transaction is kept.
 router.post("/forgotpasswordOTP", async function (req, res) {
   const param = req.body;
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    console.log("Received Request:", param);
-
     const token = Math.floor(1000 + Math.random() * 9000); // 4-digit OTP
 
-    let entity = {
+    const entity = {
       email: param.Email,
       resetToken: token,
       resetTokenExpires: new Date(Date.now() + 3600000), // 1-hour expiry
     };
 
-    const resp1 = await forgotpassword.create([entity], { session });
+    await forgotpassword.create([entity], { session });
 
-    // Configure email transport using environment variables
-    const transportmail = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    // Email message
-    const message = {
+    // Send email before committing the transaction
+    await getMailTransport().sendMail({
       from: process.env.EMAIL_USER,
       to: param.Email,
       subject: "RESET PASSWORD - ORGANIC",
       text: `Your OTP Number: ${token}`,
-    };
-
-    // Send email before committing the transaction
-    await transportmail.sendMail(message);
+    });
 
     await session.commitTransaction();
     session.endSession();
@@ -457,7 +384,7 @@ router.post("/forgotpasswordOTP", async function (req, res) {
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-    console.error("Error:", err);
+    console.error("Error:", err.message);
 
     return res.status(500).json({
       Boolval: false,
@@ -470,7 +397,7 @@ router.post("/forgotpasswordOTP", async function (req, res) {
 
 router.get('/ValidateOtp', async (req, res) => {
   try {
-    let response = await forgotpassword.find();
+    const response = await forgotpassword.find().lean();
     return res.status(200).json({
       Boolval: true,
       data: response,
@@ -490,11 +417,11 @@ router.get('/ValidateOtp', async (req, res) => {
 router.post('/UpdatePassword' , async function (req, res) {
   const entity = req.body;
   try {
-    let response = await OrganicUserDetails.updateOne(
+    await OrganicUserDetails.updateOne(
       { Email: entity.Email },
-      { $set: { Password: entity.Password } } 
-  );    
-  let response1 = await forgotpassword.findOneAndDelete({ email: entity.Email});
+      { $set: { Password: entity.Password } }
+    );
+    await forgotpassword.findOneAndDelete({ email: entity.Email});
     return res.status(200).send({
       Boolval: true,
       returnerror: "",
@@ -511,10 +438,13 @@ router.post('/UpdatePassword' , async function (req, res) {
 
 router.get('/Getorders', async function (req, res) {
   try {
-    let param = req.query
+    const filter = { UserName: req.query.UserName };
 
-    const resp1 = await Address.find({UserName:param.UserName});
-    const resp2 = await orderdet.find({UserName:param.UserName});
+    // Independent queries run concurrently.
+    const [resp1, resp2] = await Promise.all([
+      Address.find(filter).lean(),
+      orderdet.find(filter).lean(),
+    ]);
 
     res.status(200).json({
       Boolval: true,
@@ -534,34 +464,22 @@ router.get('/Getorders', async function (req, res) {
 
 router.post('/AddEvents' , async function (req, res) {
   const entity = req.body;
-  console.log(entity)
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const existingEvent = await AddEventsModel.findOne({ EventNo: entity.EventNo }).session(session);
-    
+    const existingEvent = await AddEventsModel.exists({ EventNo: entity.EventNo });
+
     if (existingEvent) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(400).send({
         Boolval: false,
         returnerror: "Event No already exists",
       });
     }
 
-
-
-    const resp1 = await AddEventsModel.create([entity], { session });
-    await session.commitTransaction();
-    session.endSession();
+    await AddEventsModel.create(entity);
     return res.status(200).send({
       Boolval: true,
       returnerror: "",
     });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-
     return res.send({
       Boolval: false,
       returnerror: err.message,
@@ -571,26 +489,19 @@ router.post('/AddEvents' , async function (req, res) {
 
 
 
-
-
 router.post("/UpdateEvent", async function (req, res) {
-  const entity = req.body; 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const entity = req.body;
 
   try {
     const resp1 = await AddEventsModel.findOneAndUpdate(
-      { EventNo: entity.EventNo }, 
+      { EventNo: entity.EventNo },
       entity,
-      { new: true, session } 
+      { new: true }
     );
 
     if (!resp1) {
       throw new Error("Event not found");
     }
-
-    await session.commitTransaction();
-    session.endSession();
 
     return res.status(200).send({
       Boolval: true,
@@ -598,9 +509,6 @@ router.post("/UpdateEvent", async function (req, res) {
       updatedEvent: resp1,
     });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-
     return res.status(500).send({
       Boolval: false,
       returnerror: err.message,
@@ -613,7 +521,7 @@ router.post("/UpdateEvent", async function (req, res) {
 
 router.get('/GetEvents', async function (req, res) {
   try {
-    const response = await AddEventsModel.find();
+    const response = await AddEventsModel.find().lean();
     res.status(200).json({
       Boolval: true,
       data: response,
@@ -631,9 +539,11 @@ router.get('/GetEvents', async function (req, res) {
 
 router.get('/EventsGetById', async function (req, res) {
   try {
-    let param = req.query
-    const response = await AddEventsModel.find({EventNo:param.EventNo});
-    const response1 = await RegisterationEvent.find({EventNo:param.EventNo});
+    const filter = { EventNo: req.query.EventNo };
+    const [response, response1] = await Promise.all([
+      AddEventsModel.find(filter).lean(),
+      RegisterationEvent.find(filter).lean(),
+    ]);
 
     res.status(200).json({
       Boolval: true,
@@ -651,172 +561,64 @@ router.get('/EventsGetById', async function (req, res) {
 )
 
 
-
-// router.post("/RegisterEvent", async function (req, res) {
-
-//   res.setHeader('Access-Control-Allow-Origin', '*');
-//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-//   const entity = req.body;
-//   console.log(entity)
-//   const session = await mongoose.startSession();
-//   session.startTransaction();
-
-//   try {
-//     const resp1 = await RegisterationEvent.create([entity], { session });
-//     await session.commitTransaction();
-//     const qrFilePath = 'qrcode.png';
-//     const qrText = `EventName: ${entity.EventTitle}
-//     Name: ${entity.FullName}
-//     Registration ID: ${entity.RegistrationID}
-//     Email: ${entity.EmailAddress}`;   
-//     await generateQRCode(qrText, qrFilePath);
-
-
-//     const transportmail = nodemailer.createTransport({
-//       service: "gmail",
-//       auth: {
-//         user: process.env.EMAIL_USER, 
-//         pass: process.env.EMAIL_PASS,
-//       },
-//     });
-
-//     // Email message
-//     const message = {
-//       from: process.env.EMAIL_USER,
-//       to: entity.EmailAddress,
-//       subject: "🎉 Event Registration Confirmation",
-//       text: `Dear ${entity.FullName},
-  
-//   We are pleased to confirm your registration for **${entity.EventTitle}**.
-  
-//   Thank you for signing up! We are excited to have you with us and look forward to an engaging and insightful event. If you have any questions or need assistance, please feel free to reach out.
-  
-//   See you there!
-  
-//   Best regards,  
-//   The Event Team`
-//   ,
-//   attachments: [
-//     {
-//         filename: 'qrcode.png',
-//         path: qrFilePath
-//     }
-// ]
-//   };
-//     await transportmail.sendMail(message);
-//     await session.commitTransaction();
-//     session.endSession();
-//     return res.status(200).json({
-//       Boolval: true,
-//       msg: "Email sent successfully",
-//     });
-//   } catch (err) {
-//     await session.abortTransaction();
-//     session.endSession();
-//     console.error("Error:", err);
-//     return res.status(500).json({
-//       Boolval: false,
-//       returnerror: err.message
-//     });
-//   }
-// });
-
-
-
-// const generateQRCode = async (text, filePath) => {
-//     return new Promise((resolve, reject) => {
-//         QRCode.toFile(filePath, text, { type: 'png' }, (err) => {
-//             if (err) reject(err);
-//             resolve(filePath);
-//         });
-//     });
-// };
-
-
-const generateQRCode = async (text) => {
-  return new Promise((resolve, reject) => {
-      QRCode.toBuffer(text, { errorCorrectionLevel: 'L' }, (err, buffer) => {
-          if (err) reject(err);
-          resolve(buffer);
-      });
-  });
-};
-
+// Insert + email must succeed together, so the transaction is kept.
 router.post("/RegisterEvent", async function (req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
   const entity = req.body;
-  console.log(entity);
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const count = await RegisterationEvent.countDocuments();
-    let countnum = count+1 
-    let DocNo = entity.EventTitle.slice(0, 3) + '/' + countnum + '/' + '2025';
+    const DocNo = entity.EventTitle.slice(0, 3) + '/' + (count + 1) + '/' + '2025';
     entity.RegisterationID = DocNo;
-      const resp1 = await RegisterationEvent.create([entity], { session });
-      const qrText = `EventName: ${entity.EventTitle}
+    await RegisterationEvent.create([entity], { session });
+    const qrText = `EventName: ${entity.EventTitle}
       Name: ${entity.FullName}
       Registration ID: ${entity.RegistrationID}
       Email: ${entity.EmailAddress}`;
-      
-      // Generate QR code as a buffer (no file system needed)
-      const qrCodeBuffer = await generateQRCode(qrText);
 
-      const transportmail = nodemailer.createTransport({
-          service: "gmail",
-          auth: {
-              user: process.env.EMAIL_USER, 
-              pass: process.env.EMAIL_PASS,
-          },
-      });
+    // Generate QR code as a buffer (no file system needed)
+    const qrCodeBuffer = await require('qrcode').toBuffer(qrText, { errorCorrectionLevel: 'L' });
 
-      // Email message
-      const message = {
-          from: process.env.EMAIL_USER,
-          to: entity.EmailAddress,
-          subject: "🎉 Event Registration Confirmation",
-          text: `Dear ${entity.FullName},
-          
+    await getMailTransport().sendMail({
+      from: process.env.EMAIL_USER,
+      to: entity.EmailAddress,
+      subject: "🎉 Event Registration Confirmation",
+      text: `Dear ${entity.FullName},
+
           We are pleased to confirm your registration for **${entity.EventTitle}**.
-          
+
           Thank you for signing up! We are excited to have you with us and look forward to an engaging and insightful event. If you have any questions or need assistance, please feel free to reach out.
-          
+
           See you there!
-          
-          Best regards,  
+
+          Best regards,
           The Event Team`,
-          attachments: [
-              {
-                  filename: 'qrcode.png',
-                  content: qrCodeBuffer,
-                  encoding: 'base64'
-              }
-          ]
-      };
+      attachments: [
+        {
+          filename: 'qrcode.png',
+          content: qrCodeBuffer,
+          encoding: 'base64'
+        }
+      ]
+    });
 
-      await transportmail.sendMail(message);
-      await session.commitTransaction();
-      session.endSession();
+    await session.commitTransaction();
+    session.endSession();
 
-      return res.status(200).json({
-          Boolval: true,
-          msg: "Email sent successfully",
-      });
+    return res.status(200).json({
+      Boolval: true,
+      msg: "Email sent successfully",
+    });
 
   } catch (err) {
-      await session.abortTransaction();
-      session.endSession();
-      console.error("Error:", err);
-      return res.status(500).json({
-          Boolval: false,
-          returnerror: err.message
-      });
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error:", err.message);
+    return res.status(500).json({
+      Boolval: false,
+      returnerror: err.message
+    });
   }
 });
 
@@ -824,7 +626,7 @@ router.post("/RegisterEvent", async function (req, res) {
 
 router.get('/GetFolder' , async function (req, res) {
   try {
-    const response = await YearfolderSchema.find();
+    const response = await YearfolderSchema.find().lean();
     res.status(200).json({
       Boolval: true,
       data: response,
@@ -841,15 +643,10 @@ router.get('/GetFolder' , async function (req, res) {
 
 router.post('/AddFolder' , async function (req, res) {
   const entity = req.body;
-  console.log(entity)
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const existingEvent = await YearfolderSchema.findOne({ YearName: entity.YearName }).session(session);
-    
+    const existingEvent = await YearfolderSchema.exists({ YearName: entity.YearName });
+
     if (existingEvent) {
-      await session.abortTransaction();
-      session.endSession();
       return res.send({
         Boolval: false,
         returnerror: "Year already exists",
@@ -857,17 +654,12 @@ router.post('/AddFolder' , async function (req, res) {
       });
     }
 
-    const resp1 = await YearfolderSchema.create([entity], { session });
-    await session.commitTransaction();
-    session.endSession();
+    await YearfolderSchema.create(entity);
     return res.status(200).send({
       Boolval: true,
       returnerror: "",
     });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-
     return res.send({
       Boolval: false,
       returnerror: err.message,
@@ -879,14 +671,13 @@ router.post('/AddFolder' , async function (req, res) {
 
 router.get('/GetLocationDetails', async function (req, res) {
   try {
-  let resp = await LocationSchema.find({});
+    const resp = await LocationSchema.find({}).lean();
     res.status(200).json({
       Boolval: true,
       data: resp,
       returnerror: ""
     });
   } catch (err) {
-  
     res.status(500).json({
       Boolval: false,
       returnerror: err.message
@@ -898,14 +689,13 @@ router.get('/GetLocationDetails', async function (req, res) {
 
 router.get('/GetVendorDetails', async function (req, res) {
   try {
-    let resp = await VendorSchema.find({});
+    const resp = await VendorSchema.find({}).lean();
     res.status(200).json({
       Boolval: true,
       data: resp,
       returnerror: ""
     });
   } catch (err) {
-  
     res.status(500).json({
       Boolval: false,
       returnerror: err.message
@@ -916,17 +706,15 @@ router.get('/GetVendorDetails', async function (req, res) {
 
 
 
-
 router.get('/GetAllPrograms', async function (req, res) {
   try {
-    let resp = await ProgramMaster.find({});
+    const resp = await ProgramMaster.find({}).lean();
     res.status(200).json({
       Boolval: true,
       data: resp,
       returnerror: ""
     });
   } catch (err) {
-  
     res.status(500).json({
       Boolval: false,
       returnerror: err.message
@@ -938,31 +726,22 @@ router.get('/GetAllPrograms', async function (req, res) {
 
 router.post('/Schedule' , async function (req, res) {
   const entity = req.body;
-  console.log(entity)
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const existingEvent = await ScheduleSchema.findOne({ ScheduleID: entity.Entity.ScheduleID }).session(session);
-    
+    const existingEvent = await ScheduleSchema.exists({ ScheduleID: entity.Entity.ScheduleID });
+
     if (existingEvent) {
-      await session.abortTransaction();
-      session.endSession();
       return res.send({
         Boolval: false,
         returnerror: "ScheduleID exists",
       });
     }
 
-    const resp1 = await ScheduleSchema.create([entity.Entity], { session });
-    await session.commitTransaction();
-    session.endSession();
+    await ScheduleSchema.create(entity.Entity);
     return res.status(200).send({
       Boolval: true,
       returnerror: "",
     });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
     return res.send({
       Boolval: false,
       returnerror: err.message,
@@ -972,23 +751,16 @@ router.post('/Schedule' , async function (req, res) {
 
 
 
-
-
-
-
-
-
 router.get('/GetBusSearch', async function (req, res) {
   try {
-    let param = req.query
-    let resp = await ScheduleSchema.find({FromLocation:param.FromLocation,ToLocation:param.ToLocation});
+    const param = req.query
+    const resp = await ScheduleSchema.find({FromLocation:param.FromLocation,ToLocation:param.ToLocation}).lean();
     res.status(200).json({
       Boolval: true,
       data: resp,
       returnerror: ""
     });
   } catch (err) {
-  
     res.status(500).json({
       Boolval: false,
       returnerror: err.message
@@ -1000,17 +772,13 @@ router.get('/GetBusSearch', async function (req, res) {
 
 router.get('/GetScheduleDetail', async function (req, res) {
   try {
-    let param = req.query
-
-    console.log(param,'hello')
-    let resp = await ScheduleSchema.findOne({ScheduleID:param.ScheduleID});
+    const resp = await ScheduleSchema.findOne({ScheduleID:req.query.ScheduleID}).lean();
     res.status(200).json({
       Boolval: true,
       data: resp,
       returnerror: ""
     });
   } catch (err) {
-  
     res.status(500).json({
       Boolval: false,
       returnerror: err.message
@@ -1021,23 +789,14 @@ router.get('/GetScheduleDetail', async function (req, res) {
 
 
 
-
 router.post('/BusBooking' , async function (req, res) {
-  const entity = req.body;
-  console.log(entity)
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
-    const resp1 = await BookingSchema.create([entity.Entity], { session });
-    await session.commitTransaction();
-    session.endSession();
+    await BookingSchema.create(req.body.Entity);
     return res.status(200).send({
       Boolval: true,
       returnerror: "",
     });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
     return res.send({
       Boolval: false,
       returnerror: err.message,
@@ -1047,31 +806,25 @@ router.post('/BusBooking' , async function (req, res) {
 
 
 
-
-
-
 router.get('/GetBookedSeats', async function (req, res) {
   try {
-  let param = req.query
-  const result = await BookingSchema.aggregate([
-  { $match: { scheduleId: param.ScheduleID } },
-  { $unwind: "$busBookingPassengers" },
-  {
-    $group: {
-      _id: "$scheduleId",
-      seatNumbers: { $addToSet: "$busBookingPassengers.seatNo" }
-    }
-  }
-]);
+    const result = await BookingSchema.aggregate([
+      { $match: { scheduleId: req.query.ScheduleID } },
+      { $unwind: "$busBookingPassengers" },
+      {
+        $group: {
+          _id: "$scheduleId",
+          seatNumbers: { $addToSet: "$busBookingPassengers.seatNo" }
+        }
+      }
+    ]);
 
-console.log(result);
     res.status(200).json({
       Boolval: true,
       data: result,
       returnerror: ""
     });
   } catch (err) {
-  
     res.status(500).json({
       Boolval: false,
       returnerror: err.message
@@ -1082,18 +835,11 @@ console.log(result);
 
 router.post('/createOrder', async function (req, res) {
   try {
-    const razorpay = new Razorpay({
-      key_id: "rzp_test_AApuZR0yWRvZ5T",
-      key_secret: "sYxU4gVHXlaWWFw7BYtdblB2"
-    });
-
-    const options = {
+    const response = await getRazorpay().orders.create({
       amount: req.body.amount * 100,
       currency: "INR",
       receipt: "order_rcptid_11"
-    };
-
-    const response = await razorpay.orders.create(options);
+    });
 
     res.status(200).json({
       Boolval: true,
@@ -1107,9 +853,6 @@ router.post('/createOrder', async function (req, res) {
     });
   }
 });
-
-
-
 
 
 module.exports = router;

@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const type = require('mongoose/lib/schema/operators/type');
 const { Schema } = mongoose;
 
 const UserDetailsSchema = new Schema({
@@ -36,7 +35,6 @@ const BookingPracelSchema = new Schema({
   ToBranchCode: { type: String, maxlength: 10 },
   FormBranchCode: { type: String, maxlength: 10 },
 
-  FromPlace: { type: String, maxlength: 60 },
   FromName: { type: String, maxlength: 60 },
   FromPhoneNo: { type: String, maxlength: 30 },
   FromGSTNo: { type: String, maxlength: 30 },
@@ -383,7 +381,7 @@ module.exports = {
   ScheduleSchema:mongoose.model('ScheduleSchema',ScheduleSchema),
   BusBookingPassengerSchema:mongoose.model('BusBookingPassengerSchema',BusBookingPassengerSchema),
   BookingSchema:mongoose.model('BookingSchema',BookingSchema),
-  ProgramMaster:mongoose.model('BookingSchema',ProgramMaster),
+  ProgramMaster:mongoose.model('ProgramMaster',ProgramMaster),
 
 
 
