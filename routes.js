@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const {forgotpassword, Userdetails,ArticleTable,BookingPracel,YearfolderSchema,
-  BookingPracelDet,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel,RegisterationEvent,
+  BookingPracelDet,YearEventModel,Addproduct ,orderdet,Address,OrganicUserDetails,AddEventsModel,RegisterationEvent,
   ProgramMaster} = require("./model");
+const { Announcement, ANNOUNCEMENT_LABELS } = require("./model");
 const jwt = require('jsonwebtoken');
+const { router: adminAuthRouter, requireAdmin } = require('./adminAuth');
 const mongoose = require("mongoose");
 
 const {VendorSchema,LocationSchema,ScheduleSchema,BookingSchema} = require("./model")
@@ -669,6 +671,69 @@ router.post('/AddFolder' , async function (req, res) {
 
 
 
+// ---- Events inside a year folder (name, date, guest, participant list from Excel) ----
+router.get('/GetYearEvents', requireAdmin, async function (req, res) {
+  try {
+    const filter = { Void: { $ne: 'Y' } };
+    if (req.query.YearName) filter.YearName = String(req.query.YearName);
+    // Participants are omitted from the list view (can be large); fetch one with /GetYearEventById.
+    const data = await YearEventModel.find(filter).select('-Participants').sort({ createdAt: -1 }).lean();
+    res.status(200).json({ Boolval: true, data, returnerror: "" });
+  } catch (err) {
+    res.status(500).json({ Boolval: false, returnerror: err.message, message: err.message });
+  }
+});
+
+router.get('/GetYearEventById', requireAdmin, async function (req, res) {
+  try {
+    const data = await YearEventModel.findById(req.query.id).lean();
+    if (!data) return res.send({ Boolval: false, returnerror: "Not found", message: "Not found" });
+    res.status(200).json({ Boolval: true, data, returnerror: "" });
+  } catch (err) {
+    res.status(500).json({ Boolval: false, returnerror: err.message, message: err.message });
+  }
+});
+
+router.post('/AddYearEvent', requireAdmin, async function (req, res) {
+  const e = req.body || {};
+  try {
+    const YearName = String(e.YearName || '').trim();
+    const EventName = String(e.EventName || '').trim();
+    const EventDate = String(e.EventDate || '').trim();
+    if (!YearName || !EventName || !EventDate) {
+      return res.send({ Boolval: false, returnerror: "Year, event name and date are required", message: "Year, event name and date are required" });
+    }
+    if (!(await YearfolderSchema.exists({ YearName }))) {
+      return res.send({ Boolval: false, returnerror: "Folder does not exist", message: "Folder does not exist" });
+    }
+    const Participants = Array.isArray(e.Participants) ? e.Participants : [];
+    await YearEventModel.create({
+      YearName,
+      EventName,
+      EventDate,
+      GuestName: String(e.GuestName || '').trim(),
+      FileName: e.FileName,
+      Participants,
+      ParticipantCount: Participants.length,
+      Void: 'N',
+      createdBy: e.createdBy,
+    });
+    return res.status(200).send({ Boolval: true, returnerror: "" });
+  } catch (err) {
+    return res.send({ Boolval: false, returnerror: err.message, message: err.message });
+  }
+});
+
+router.post('/VoidYearEvent', requireAdmin, async function (req, res) {
+  try {
+    await YearEventModel.updateOne({ _id: req.body.id }, { Void: 'Y' });
+    return res.status(200).send({ Boolval: true, returnerror: "" });
+  } catch (err) {
+    return res.send({ Boolval: false, returnerror: err.message, message: err.message });
+  }
+});
+
+
 router.get('/GetLocationDetails', async function (req, res) {
   try {
     const resp = await LocationSchema.find({}).lean();
@@ -854,5 +919,85 @@ router.post('/createOrder', async function (req, res) {
   }
 });
 
+
+// ---------------- Event Announcements (CRUD) ----------------
+
+const pickAnnouncement = ({ EventName, Comment, Description, Label }) =>
+  ({ EventName, Comment, Description, Label });
+
+// Dropdown values for the Label field
+router.get('/GetAnnouncementLabels', (req, res) => {
+  res.status(200).json({ Boolval: true, data: ANNOUNCEMENT_LABELS, returnerror: "" });
+});
+
+// Create
+router.post('/AddAnnouncement', async function (req, res) {
+  try {
+    const doc = await Announcement.create(pickAnnouncement(req.body));
+    return res.status(200).send({ Boolval: true, returnerror: "", data: doc });
+  } catch (err) {
+    return res.send({ Boolval: false, returnerror: err.message });
+  }
+});
+
+// List (optional ?Label= filter), newest first
+router.get('/GetAnnouncements', async function (req, res) {
+  try {
+    const filter = req.query.Label ? { Label: String(req.query.Label) } : {};
+    const data = await Announcement.find(filter).sort({ createdAt: -1 }).lean();
+    res.status(200).json({ Boolval: true, data, returnerror: "" });
+  } catch (err) {
+    res.status(500).json({ Boolval: false, returnerror: err.message });
+  }
+});
+
+// Read one (for the edit screen)
+router.get('/GetAnnouncementById', async function (req, res) {
+  try {
+    const data = await Announcement.findById(req.query.id).lean();
+    if (!data) {
+      return res.status(404).json({ Boolval: false, returnerror: "Announcement not found" });
+    }
+    res.status(200).json({ Boolval: true, data, returnerror: "" });
+  } catch (err) {
+    res.status(500).json({ Boolval: false, returnerror: err.message });
+  }
+});
+
+// Update
+router.put('/UpdateAnnouncement', async function (req, res) {
+  try {
+    const data = await Announcement.findByIdAndUpdate(
+      req.body._id,
+      pickAnnouncement(req.body),
+      { new: true, runValidators: true, omitUndefined: true }
+    ).lean();
+    if (!data) {
+      return res.status(404).json({ Boolval: false, returnerror: "Announcement not found" });
+    }
+    res.status(200).json({ Boolval: true, returnerror: "", data });
+  } catch (err) {
+    res.status(500).json({ Boolval: false, returnerror: err.message });
+  }
+});
+
+// Delete
+router.delete('/DeleteAnnouncement', async function (req, res) {
+  try {
+    const data = await Announcement.findByIdAndDelete(req.query.id).lean();
+    if (!data) {
+      return res.status(404).json({ Boolval: false, returnerror: "Announcement not found" });
+    }
+    res.status(200).json({ Boolval: true, returnerror: "" });
+  } catch (err) {
+    res.status(500).json({ Boolval: false, returnerror: err.message });
+  }
+});
+
+// Admin sign-in -> /api/admin/login, /api/admin/me
+router.use('/api/admin', adminAuthRouter);
+
+// Event announcements CRUD -> /api/events
+router.use('/api/events', require('./announcement'));
 
 module.exports = router;

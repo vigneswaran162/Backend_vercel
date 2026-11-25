@@ -272,6 +272,19 @@ const RegistrationEventSchema = new mongoose.Schema({
   timestamps: true 
  });
 
+// Event entry created inside a year folder (event name/date, guest, uploaded participant list)
+const YearEventSchema = new mongoose.Schema({
+  YearName: { type: String, required: true, maxlength: 50, index: true },
+  EventName: { type: String, required: true, maxlength: 200 },
+  EventDate: { type: String, required: true, maxlength: 30 },
+  GuestName: { type: String, maxlength: 200 },
+  FileName: { type: String, maxlength: 255 },
+  ParticipantCount: { type: Number, default: 0 },
+  Participants: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  Void: { type: String, maxlength: 2, default: 'N' },
+  createdBy: { type: String, maxlength: 100 },
+}, { collection: 'YearEvent', timestamps: true });
+
 //bus Booking
 
 const LocationSchema = new mongoose.Schema({
@@ -363,7 +376,22 @@ const ProgramMaster = new mongoose.Schema({
   timestamps: true
 });
 
+// Event announcements (postponed / cancelled notices etc.)
+const ANNOUNCEMENT_LABELS = ['Event Postponed', 'Event Canceled'];
+
+const AnnouncementSchema = new mongoose.Schema({
+  EventName: { type: String, required: true, trim: true, maxlength: 100 },
+  Comment: { type: String, trim: true, maxlength: 500 },
+  Description: { type: String, trim: true, maxlength: 3000 },
+  Label: { type: String, required: true, enum: ANNOUNCEMENT_LABELS },
+}, {
+  collection: 'EventAnnouncement',
+  timestamps: true
+});
+
 module.exports = {
+  ANNOUNCEMENT_LABELS,
+  Announcement: mongoose.model('EventAnnouncement', AnnouncementSchema),
   BookingPracel: mongoose.model('BookingPracel', BookingPracelSchema),
   BookingPracelDet: mongoose.model('BookingPracelDet', BookingPracelDetSchema),
   Userdetails: mongoose.model('Userdetails', UserDetailsSchema),
@@ -376,6 +404,7 @@ module.exports = {
   AddEventsModel:mongoose.model('AddEvent',AddEventSchema),
   RegisterationEvent:mongoose.model('RegisterationEvent',RegistrationEventSchema),
   YearfolderSchema:mongoose.model('Yearfolder',YearfolderSchema),
+  YearEventModel:mongoose.model('YearEvent',YearEventSchema),
   VendorSchema:mongoose.model('VendorSchema',VendorSchema),
   LocationSchema:mongoose.model('LocationSchema',LocationSchema),
   ScheduleSchema:mongoose.model('ScheduleSchema',ScheduleSchema),
