@@ -9,11 +9,11 @@ app.disable('x-powered-by');
 // express.json/urlencoded are the same body-parser middlewares; one pass is enough
 // (previously each body type was registered twice).
 app.use(express.urlencoded({
-    limit: "50mb",
+    limit: "4mb",
     extended: true,
     parameterLimit: 50000
 }));
-app.use(express.json({ limit: "50mb" }));
+app.use(express.json({ limit: "4mb" }));
 app.use(cors({
     origin: '*',
     methods: 'GET, POST, PUT, DELETE',
@@ -25,15 +25,15 @@ const mongoURI = process.env.MONGO_URL;
 
 if (!mongoURI) {
   console.error("MongoDB connection string is missing!");
-  process.exit(1);
 }
 
 // Module scope => reused across warm serverless invocations (one pool per instance).
 let connecting = null;
 function connectDB() {
+  if (!mongoURI) return Promise.resolve();
   if (!connecting) {
     connecting = mongoose
-      .connect(mongoURI)
+      .connect(mongoURI, { serverSelectionTimeoutMS: 8000, maxPoolSize: 5 })
       .then(() => console.log("MongoDB connected successfully"))
       .catch((err) => {
         console.error("MongoDB connection error:", err.message);
@@ -42,11 +42,10 @@ function connectDB() {
   }
   return connecting;
 }
-connectDB();
 
-// If the initial connection failed, retry on the next request (warm instances).
-app.use((req, res, next) => {
-  if (mongoose.connection.readyState === 0) connectDB();
+// Wait for the DB before handling a request (serverless may freeze after the response).
+app.use(async (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) await connectDB();
   next();
 });
 
